@@ -1,4 +1,4 @@
-# Neologger ![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg)
+# Neologger ![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg) ![Language](https://img.shields.io/badge/Language-C%2FC%2B%2B-blue.svg)
 ***Neo Logger*** - **Is a project written in pure C/C++ for custom recording of events to a file**
 
 # **Dependencies**
