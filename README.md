@@ -12,7 +12,7 @@
 
 - **Inclusion in the project**
   - *C*
-    ```clang
+    ```c
     #include "neologger/neologger.h"
     ```
   - *C++*
@@ -22,7 +22,7 @@
 
 - **Example**
   - *C*
-    ```clang
+    ```c
     #include "neologger/neologger.h"
     
     int main() {
