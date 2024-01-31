@@ -48,7 +48,7 @@
             return 1;
         }
     
-        logMessage(logger, logMessage, 1);
+        logMessage(logger, logMessage, 0);
     
         free(logText->text);
         free(logText);
@@ -66,26 +66,30 @@
     
     int main()
     {
-    	NeoLogger::Logger logger(L"log.txt");
+        NeoLogger::Logger logger(L"log.txt");
     
-    	logger.logMessage(
-    		NeoLogger::Core::LogLevel::DEBUG,
-    		logger.getLogText(L"Debug message"),
-            false
-    	);
-    
-    	logger.logMessage(logger.toLogMessage(
-    		NeoLogger::Core::LogLevel::INFO,
-    		logger.getLogText(L"Informational message")),
+        logger.logMessage(
+            NeoLogger::Core::LogLevel::DEBUG,
+            logger.getLogText(L"Debug message"),
             false
         );
     
-    	logger.logMessage(logger.toLogMessage(
-    		NeoLogger::Core::LogLevel::ERROR,
-    		logger.getLogText(L"Error message")),
+        logger.logMessage(
+            logger.toLogMessage(
+                NeoLogger::Core::LogLevel::INFO,
+                logger.getLogText(L"Informational message")
+            ),
             false
         );
     
-    	return 0x0;
+        logger.logMessage(
+            logger.toLogMessage(
+                NeoLogger::Core::LogLevel::ERROR,
+                logger.getLogText(L"Error message")
+            ),
+            false
+        );
+    
+        return 0x0;
     }
     ```
