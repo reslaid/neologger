@@ -92,3 +92,16 @@
         return 0x0;
     }
     ```
+
+- **Docs**
+- **Output format customization**
+- *C++*
+  ```cpp
+  NeoLogger::Logger logger(L"log.txt");
+  logger.setFormatter(L"[%asctime%] - [%level%]: %message%");
+  ```
+- *C*
+  ```c
+  Logger* logger = createLogger(L"log.txt");
+  logger.formatter = L"[%asctime%] - [%level%]: %message%";
+  ```
