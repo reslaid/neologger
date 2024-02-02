@@ -41,7 +41,33 @@ namespace NeoLogger
             // Operator: (LogText) += (LogText)
             LogText& operator+=(const LogText& logText)
             {
+                this->length += logText.length;
                 this->text += logText.text;
+                return *this;
+            }
+
+            // Operator: (LogText) += (std::wstring)
+            LogText& operator+=(const std::wstring& wideString)
+            {
+                this->length += wideString.length();
+                this->text += wideString;
+                return *this;
+            }
+
+            // Operator: (LogText) += (wchar_t*)
+            LogText& operator+=(const wchar_t* wideString)
+            {
+                this->length += wcslen(wideString);
+                this->text += wideString;
+                return *this;
+            }
+
+            // Operator: (LogText) += (wchar_t)
+            LogText& operator+=(const wchar_t wideString)
+            {
+                int charlen = 0x1;
+                this->length += charlen;
+                this->text += std::wstring(charlen, wideString);
                 return *this;
             }
         };
