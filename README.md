@@ -94,7 +94,7 @@
     ```
 
 - **Docs**
-- **Output format customization**
+-- **Output format customization**
 
   *C++*
   ```cpp
