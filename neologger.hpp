@@ -209,7 +209,7 @@ namespace NeoLogger
 
             // Assign our values
             logText.text = (std::wstring)wideString;
-            logText.length = lstrlenW(wideString);
+            logText.length = wcslen(wideString);
 
             // Return the prepared structure
             return logText;
@@ -222,8 +222,8 @@ namespace NeoLogger
             NeoLogger::Core::LogText logText;
 
             // Assign our values
-            logText.text = (std::wstring)(wchar_t*)wideChar;
             logText.length = 0x1;
+            logText.text = std::wstring(logText.length, wideChar);
 
             // Return the prepared structure
             return logText;
