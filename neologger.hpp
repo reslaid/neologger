@@ -201,6 +201,34 @@ namespace NeoLogger
             return logText;
         }
 
+        // Function for converting from an extended char pointer to a structure
+        NeoLogger::Core::LogText getLogText(wchar_t* wideString)
+        {
+            // Initialize our structure
+            NeoLogger::Core::LogText logText;
+
+            // Assign our values
+            logText.text = (std::wstring)wideString;
+            logText.length = lstrlenW(wideString);
+
+            // Return the prepared structure
+            return logText;
+        }
+
+        // Function for converting from an extended char to a structure
+        NeoLogger::Core::LogText getLogText(wchar_t wideChar)
+        {
+            // Initialize our structure
+            NeoLogger::Core::LogText logText;
+
+            // Assign our values
+            logText.text = (std::wstring)(wchar_t*)wideChar;
+            logText.length = 0x1;
+
+            // Return the prepared structure
+            return logText;
+        }
+
         // Function for converting from an extended string to a structure
         NeoLogger::Core::LogTimestamp getLogTimestamp()
         {
