@@ -37,6 +37,13 @@ namespace NeoLogger
 
             // Represents the length of text in logs
             std::int64_t length;
+
+            // Operator: (LogText) += (LogText)
+            LogText& operator+=(const LogText& logText)
+            {
+                this->text += logText.text;
+                return *this;
+            }
         };
 
         // Represents the timestamp of an event in logs
