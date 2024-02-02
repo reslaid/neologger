@@ -37,6 +37,39 @@ namespace NeoLogger
 
             // Represents the length of text in logs
             std::int64_t length;
+
+            // Operator: (LogText) += (LogText)
+            LogText& operator+=(const LogText& logText)
+            {
+                this->length += logText.length;
+                this->text += logText.text;
+                return *this;
+            }
+
+            // Operator: (LogText) += (std::wstring)
+            LogText& operator+=(const std::wstring& wideString)
+            {
+                this->length += wideString.length();
+                this->text += wideString;
+                return *this;
+            }
+
+            // Operator: (LogText) += (wchar_t*)
+            LogText& operator+=(const wchar_t* wideString)
+            {
+                this->length += wcslen(wideString);
+                this->text += wideString;
+                return *this;
+            }
+
+            // Operator: (LogText) += (wchar_t)
+            LogText& operator+=(const wchar_t wideString)
+            {
+                int charlen = 0x1;
+                this->length += charlen;
+                this->text += std::wstring(charlen, wideString);
+                return *this;
+            }
         };
 
         // Represents the timestamp of an event in logs
@@ -196,6 +229,34 @@ namespace NeoLogger
             // Assign our values
             logText.text = wideString;
             logText.length = wideString.length();
+
+            // Return the prepared structure
+            return logText;
+        }
+
+        // Function for converting from an extended char pointer to a structure
+        NeoLogger::Core::LogText getLogText(wchar_t* wideString)
+        {
+            // Initialize our structure
+            NeoLogger::Core::LogText logText;
+
+            // Assign our values
+            logText.text = (std::wstring)wideString;
+            logText.length = wcslen(wideString);
+
+            // Return the prepared structure
+            return logText;
+        }
+
+        // Function for converting from an extended char to a structure
+        NeoLogger::Core::LogText getLogText(wchar_t wideChar)
+        {
+            // Initialize our structure
+            NeoLogger::Core::LogText logText;
+
+            // Assign our values
+            logText.length = 0x1;
+            logText.text = std::wstring(logText.length, wideChar);
 
             // Return the prepared structure
             return logText;
