@@ -220,6 +220,20 @@ namespace NeoLogger
             }
         }
 
+        // Function to get the structure
+        NeoLogger::Core::LogText getLogText()
+        {
+            // Initialize our structure
+            NeoLogger::Core::LogText logText;
+
+            // Assign our values
+            logText.text = L"";
+            logText.length = 0x0;
+
+            // Return the prepared structure
+            return logText;
+        }
+
         // Function for converting from an extended string to a structure
         NeoLogger::Core::LogText getLogText(std::wstring wideString)
         {
