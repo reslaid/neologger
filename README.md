@@ -93,8 +93,8 @@
     }
     ```
 
-- **Docs**
--- **Output format customization**
+# **Docs**
+-  **Output format customization**
 
   *C++*
   ```cpp
