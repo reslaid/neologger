@@ -2,381 +2,536 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <ostream>
 #include <sstream>
-#include <istream>
 #include <chrono>
+#include <string>
+#include <cstring>
+#include <tuple>
+
+#ifdef _WIN32
+  #include <Windows.h>
+#else
+  #include <unistd.h>
+#endif
 
 namespace NeoLogger
 {
-    // Error indicating that the file was not opened
-    constexpr int OPENERR = -0xF4;
 
-    // Indicates successful operation
-    constexpr int OK = 0x0;
+#pragma region constants
 
-    namespace Core
-    {
-        // Enumerator responsible for logging levels
-        enum class LogLevel
-        {
-            DEBUG,
-            INFO,
-            WARN,
-            WARNING = WARN,
-            ERROR,
-            CRITICAL,
-            FATAL = CRITICAL
-        };
+	// Error indicating that the file was not opened
+	constexpr int OPENERR =			-0xF1;
 
-        // Data structure responsible for text in logs
-        struct LogText
-        {
-            // Represents log text
-            std::wstring text;
+	// Error indicator getting device name
+	constexpr int DEVICENAMERR =	-0xF2;
 
-            // Represents the length of text in logs
-            std::int64_t length;
+	// Error indicator getting login
+	constexpr int LOGINERR =		-0xF3;
 
-            // Operator: (LogText) += (LogText)
-            LogText& operator+=(const LogText& logText)
-            {
-                this->length += logText.length;
-                this->text += logText.text;
-                return *this;
-            }
+	// Indicates successful operation
+	constexpr int OK =				0x0;
 
-            // Operator: (LogText) += (std::wstring)
-            LogText& operator+=(const std::wstring& wideString)
-            {
-                this->length += wideString.length();
-                this->text += wideString;
-                return *this;
-            }
+	// Error indicator
+	constexpr int FAILURE = OPENERR | DEVICENAMERR | LOGINERR;
 
-            // Operator: (LogText) += (wchar_t*)
-            LogText& operator+=(const wchar_t* wideString)
-            {
-                this->length += wcslen(wideString);
-                this->text += wideString;
-                return *this;
-            }
 
-            // Operator: (LogText) += (wchar_t)
-            LogText& operator+=(const wchar_t wideString)
-            {
-                int charlen = 0x1;
-                this->length += charlen;
-                this->text += std::wstring(charlen, wideString);
-                return *this;
-            }
-        };
+#pragma endregion
 
-        // Represents the timestamp of an event in logs
-        struct LogTimestamp
-        {
-            // Formatted time
-            std::tm timeInfo;
+	// Namespace for storing converters
+	namespace Converter
+	{
+		// Converts a tuple type to a string type
+		template <typename... Args>
+		std::string tupleToString(const std::tuple<Args...>& myTuple)
+		{
+			// Creating a Stream Object for a String
+			std::stringstream ss;
+			
+			ss << "(";
 
-            // Numeric time (Unix-like)
-            std::time_t time;
-        };
+			// Recursive function to process each element of a tuple
+			std::apply([&ss](const auto&... args) {
+				((ss << args << ", "), ...);
+				}, myTuple);
 
-        // Data structure responsible for log messages
-        struct LogMessage
-        {
-            // Log level
-            LogLevel level;
+			// Removing extra commas and spaces
+			std::string result = ss.str();
+			result = result.substr(0, result.size() - 2);
 
-            // Text of the message
-            LogText text;
+			result += ")";
 
-            // Time of inserting the message
-            LogTimestamp timestamp;
-        };
-    }
+			// Return the finished line
+			return result;
+		}
 
-    // Class for working with text tokens
-    class Tokens
-    {
-    public:
+		// Converting any type to an wide string
+		template<typename T>
+		std::wstring toWideString(T value)
+		{
+			// Creating a Stream Object for a Wide String
+			std::wstringstream wss;
+			
+			wss << value;
+			
+			// Return the finished line
+			return wss.str();
+		}
+	} // namespace Converter
 
-        // Change the token to the specified value
-        void replace(std::wstring& input,
-            const std::wstring& token,
-            const std::wstring& replacement)
-        {
+	// Namespace for storing information about the logger (version, publisher, etc.)
+	namespace Metadata
+	{
+		const std::tuple<int, int, int> __Version__(0, 1, 0);
+		
+		// Get logger version
+		std::wstring getVersion()
+		{
+			return NeoLogger::Converter::toWideString(
+				NeoLogger::Converter::tupleToString(
+					__Version__
+				)
+			);
+		}
+	} // namespace Metadata
 
-            size_t pos = input.find(token);
-            while (pos != std::wstring::npos) {
-                input.replace(pos, token.length(), replacement);
-                pos = input.find(token);
-            }
+	// Namespace for storing structures
+	namespace Core
+	{
+		// Enumerator responsible for logging levels
+		enum class LogLevel
+		{
+			// Debug logging level
+			DEBUG,
 
-        }
+			// Logging level for informational messages
+			INFO,
 
-        // Check if the token exists in the text
-        bool exist(std::wstring& input,
-            const std::wstring& token)
+			// Logging level for warnings
+			WARN,
 
-        {
+			// Logging level for warnings
+			WARNING = WARN,
+			
+			// Logging level for errors
+			ERR,
 
-            return input.find(token) != std::wstring::npos;
+			// Logging level for critical errors
+			CRITICAL,
 
-        }
-    };
+			// Logging level for critical errors
+			FATAL = CRITICAL
+		};
 
-    // Main logger class from which all actions are performed
-    class Logger {
-    private:
-        // The stream responsible for outputting events to a file
-        std::wofstream stream_;
+		// Data structure responsible for text in logs
+		struct LogText
+		{
+			// Represents log text
+			std::wstring text;
 
-        // The file name or path to the file used in logging
-        std::wstring filename_;
+			// Represents the length of text in logs
+			std::int64_t length;
+		};
 
-        // Basic output format for events
-        std::wstring formatter_ = L"[%asctime%] [%level%]: %message%";
+		// Represents the timestamp of an event in logs
+		struct LogTimestamp
+		{
+			// Formatted time
+			std::tm timeInfo;
 
-        // Helper class for the formatter designed to work with tokens
-        NeoLogger::Tokens tokens_;
+			// Numeric time (Unix-like)
+			std::time_t time;
+		};
 
-    public:
-        // Logger class constructor (takes the name of the file to log to)
-        Logger(const std::wstring& filename)
-        {
-            this->filename_ = filename;
-            this->stream_.open(this->filename_, std::ios::out | std::ios::app);
+		// Data structure responsible for log messages
+		struct LogMessage
+		{
+			// Log level
+			LogLevel level;
 
-            if (this->checkFile() == NeoLogger::OPENERR)
-            {
-                std::wcerr << L"Open file error: " << filename << std::endl;
-            }
-        }
+			// Text of the message
+			LogText text;
 
-        // Logger class destructor
-        ~Logger()
-        {
-            this->stream_.close();
-        }
+			// Time of inserting the message
+			LogTimestamp timestamp;
+		};
+	} // namespace Core
 
-    private:
-        // Check if the file is open
-        int checkFile()
-        {
-            if (!this->stream_.is_open())
-            {
-                // Return open error
-                return NeoLogger::OPENERR;
-            }
+	// Class for working with text tokens
+	class Tokens
+	{
+	public:
 
-            // File was opened successfully
-            return NeoLogger::OK;
-        }
+		// Change the token to the specified value
+		void replace(std::wstring& input,
+			const std::wstring& token,
+			const std::wstring& replacement)
+		{
 
-        // Get the formatted string
-        void parseTokens(
-            std::wstring logTimestamp,
-            std::wstring logLevel,
-            std::wstring logText,
-            std::wstring* result)
-        {
-            // Changing tokens to real values
-            
-            this->tokens_.replace(*result, L"%asctime%", logTimestamp);
-            this->tokens_.replace(*result, L"%level%", logLevel);
-            this->tokens_.replace(*result, L"%message%", logText);
-        }
+			// Getting a position
+			size_t pos = input.find(token);
+			
+			// Changing characters
+			while (pos != std::wstring::npos) {
+				input.replace(pos, token.length(), replacement);
+				pos = input.find(token);
+			}
 
-        // Get extended string from log level enumerator
-        std::wstring levelToWideString(NeoLogger::Core::LogLevel logLevel)
-        {
-            std::wstring wideResult;
+		}
 
-            switch (logLevel) {
-            case NeoLogger::Core::LogLevel::DEBUG:
-                return L"DEBUG";
-            case NeoLogger::Core::LogLevel::INFO:
-                return L"INFO";
-            case NeoLogger::Core::LogLevel::WARN:
-                return L"WARN";
-            case NeoLogger::Core::LogLevel::ERROR:
-                return L"ERROR";
-            case NeoLogger::Core::LogLevel::CRITICAL:
-                return L"CRITICAL";
-            default:
-                return L"UNKNOWN";
-            }
-        }
+		// Check if the token exists in the text
+		bool exist(std::wstring& input,
+			const std::wstring& token)
 
-    public:
+		{
 
-        // Function allowing to change the output format
-        void setFormatter(std::wstring _Formatter)
-        {
-            if (this->tokens_.exist(_Formatter, L"%message%"))
-            {
-                this->formatter_ = _Formatter;
-            }
-        }
+			return input.find(token) != std::wstring::npos;
 
-        // Function to get the structure
-        NeoLogger::Core::LogText getLogText()
-        {
-            // Initialize our structure
-            NeoLogger::Core::LogText logText;
+		}
+	}; // class Tokens
 
-            // Assign our values
-            logText.text = L"";
-            logText.length = 0x0;
+	// Main logger class from which all actions are performed
+	class Logger {
+	private:
+		// The stream responsible for outputting events to a file
+		std::wofstream stream_;
 
-            // Return the prepared structure
-            return logText;
-        }
+		// The file name or path to the file used in logging
+		std::wstring filename_;
 
-        // Function for converting from an extended string to a structure
-        NeoLogger::Core::LogText getLogText(std::wstring wideString)
-        {
-            // Initialize our structure
-            NeoLogger::Core::LogText logText;
+		// Basic output format for events
+		std::wstring formatter_ = L"[%asctime%] [%level%]: %message%";
 
-            // Assign our values
-            logText.text = wideString;
-            logText.length = wideString.length();
+		// Helper class for the formatter designed to work with tokens
+		NeoLogger::Tokens tokens_;
 
-            // Return the prepared structure
-            return logText;
-        }
+	public:
+		// Logger class constructor (takes the name of the file to log to)
+		Logger(const std::wstring& filename)
+		{
+			this->filename_ = filename;
+			this->stream_.open(this->filename_, std::ios::out | std::ios::app);
 
-        // Function for converting from an extended char pointer to a structure
-        NeoLogger::Core::LogText getLogText(wchar_t* wideString)
-        {
-            // Initialize our structure
-            NeoLogger::Core::LogText logText;
+			if (this->checkFile() == NeoLogger::OPENERR)
+			{
+				std::wcerr << L"Open file error: " << filename << std::endl;
+			}
+		}
 
-            // Assign our values
-            logText.text = (std::wstring)wideString;
-            logText.length = wcslen(wideString);
+		// Logger class destructor
+		~Logger()
+		{
+			this->stream_.close();
+		}
 
-            // Return the prepared structure
-            return logText;
-        }
+	private:
+		// Check if the file is open
+		int checkFile()
+		{
+			if (!this->is_open())
+			{
+				// Return open error
+				return NeoLogger::OPENERR;
+			}
 
-        // Function for converting from an extended char to a structure
-        NeoLogger::Core::LogText getLogText(wchar_t wideChar)
-        {
-            // Initialize our structure
-            NeoLogger::Core::LogText logText;
+			// File was opened successfully
+			return NeoLogger::OK;
+		}
 
-            // Assign our values
-            logText.length = 0x1;
-            logText.text = std::wstring(logText.length, wideChar);
-
-            // Return the prepared structure
-            return logText;
-        }
-
-        // Function for converting from an extended string to a structure
-        NeoLogger::Core::LogTimestamp getLogTimestamp()
-        {
-            // Initialize our structure
-            NeoLogger::Core::LogTimestamp logTimestamp;
-
-            // Get Unix-like time
-            std::time_t time = std::time(nullptr);
-
-            // Get formatted time
-            auto currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            std::tm timeInfo;
-
-            // Safe time retrieval
-
-#ifdef _WIN32 | _WIN64
-            localtime_s(&timeInfo, &currentTime);
+		// Get Login (Cross-Platform)
+		int getLogin(int bufferSize, wchar_t* buffer)
+		{
+#ifdef _WIN32
+			// On Windows
+			DWORD size = static_cast<DWORD>(bufferSize);
+			if (!GetUserNameW(buffer, &size))
+			{
+				// Failed to get the user name
+				return NeoLogger::LOGINERR;
+			}
 #else
-            localtime_r(&currentTime, &timeInfo);
+			// On other platforms
+			char* loginName = getlogin();
+			if (loginName != nullptr)
+			{
+				// Convert the login name to a wide string
+				mbstowcs(buffer, loginName, bufferSize - 1);
+				buffer[bufferSize - 1] = L'\0';  // Null-terminate the wide string
+			}
+			else
+			{
+				// Failed to get the user name
+				return NeoLogger::LOGINERR;
+			}
 #endif
-            // Assign our values
-            logTimestamp.timeInfo = timeInfo;
-            logTimestamp.time = time;
 
-            // Return the prepared structure
-            return logTimestamp;
-        }
+			// Successfully retrieved the login name
+			return NeoLogger::OK;
+		}
 
-        // Function for converting from logger options to a complete event
-        NeoLogger::Core::LogMessage toLogMessage(
-            NeoLogger::Core::LogLevel logLevel,
-            NeoLogger::Core::LogText logText)
-        {
-            // Initialize the structure
-            NeoLogger::Core::LogMessage logMessage;
+		// Get Device Name (Cross-Platform)
+		int getDeviceName(int bufferSize, wchar_t* buffer)
+		{
+#ifdef _WIN32
+			// On Windows
+			DWORD size = static_cast<DWORD>(bufferSize);
+			if (!GetComputerNameW(buffer, &size))
+			{
+				// Failed to get the device name
+				return NeoLogger::DEVICENAMERR;
+			}
+#else
+			// On other platforms
+			if (gethostname(buffer, bufferSize) != 0)
+			{
+				return NeoLogger::DEVICENAMERR;
+			}
+#endif
 
-            // Assign values
-            logMessage.level = logLevel;
-            logMessage.text = logText;
-            logMessage.timestamp = getLogTimestamp();
+			// Successfully retrieved the device name
+			return NeoLogger::OK;
 
-            // Return the prepared structure
-            return logMessage;
-        }
+		}
 
-        // Logging event from structure
-        int logMessage(NeoLogger::Core::LogMessage logMessage, bool consoleStream)
-        {
-            NeoLogger::Core::LogLevel level = logMessage.level;
-            std::wstring wideLevelString = levelToWideString(level);
+		// Get the formatted string
+		void parseTokens(
+			std::wstring logTimestamp,
+			std::wstring logLevel,
+			std::wstring logText,
+			std::wstring* result)
+		{
+			// Total Buffer Size
+			constexpr int bufferlen = 0x100;
 
-            NeoLogger::Core::LogText text = logMessage.text;
-            NeoLogger::Core::LogTimestamp timestamp = logMessage.timestamp;
+			// Changing tokens to real values
+			this->tokens_.replace(*result, L"%asctime%", logTimestamp);
+			this->tokens_.replace(*result, L"%level%", logLevel);
+			this->tokens_.replace(*result, L"%message%", logText);
 
-            std::wstringstream formattedTime;
-            formattedTime << std::put_time(&timestamp.timeInfo, L"%Y-%m-%d %H:%M:%S");
+			if (this->tokens_.exist(*result, L"%login%"))
+			{
+				// Declaring object
+				wchar_t* loginBuffer = new wchar_t[bufferlen];
 
-            if (this->checkFile() == NeoLogger::OPENERR)
-            {
-                std::wcerr << L"Open file error: " << this->filename_ << std::endl;
-                return NeoLogger::OPENERR;
-            }
+				// Initializing the object of a variable
+				this->getLogin(bufferlen, loginBuffer);
 
-            std::wstring msg = formatter_;
-            this->parseTokens(formattedTime.str(), wideLevelString, text.text, &msg);
+				// Using the object
+				this->tokens_.replace(*result, L"%login%", std::wstring(loginBuffer));
 
-            this->stream_ << msg << std::endl;
+				// Removing object from stack
+				delete[] loginBuffer;
+			}
 
-            if (consoleStream) {
-                std::wcout << msg << std::endl;
-            }
+			if (this->tokens_.exist(*result, L"%device%"))
+			{
+				// Declaring object
+				wchar_t* deviceNameBuffer = new wchar_t[bufferlen];
 
-            return NeoLogger::OK;
-        }
+				// Initializing the object of a variable
+				this->getDeviceName(bufferlen, deviceNameBuffer);
 
-        // Logging event from passed values
-        int logMessage(NeoLogger::Core::LogLevel logLevel, NeoLogger::Core::LogText logText, bool consoleStream)
-        {
-            std::wstring wideLevelString = levelToWideString(logLevel);
+				// Using the object
+				this->tokens_.replace(*result, L"%device%", std::wstring(deviceNameBuffer));
+			
+				// Removing object from stack
+				delete[] deviceNameBuffer;
+			}
+		}
 
-            NeoLogger::Core::LogTimestamp timestamp = getLogTimestamp();
+		// Get extended string from log level enumerator
+		std::wstring levelToWideString(NeoLogger::Core::LogLevel logLevel)
+		{
+			std::wstring wideResult;
 
-            std::wstringstream formattedTime;
-            formattedTime << std::put_time(&timestamp.timeInfo, L"%Y-%m-%d %H:%M:%S");
+			switch (logLevel) {
+			case NeoLogger::Core::LogLevel::DEBUG:
+				return L"DEBUG";
+			case NeoLogger::Core::LogLevel::INFO:
+				return L"INFO";
+			case NeoLogger::Core::LogLevel::WARN:
+				return L"WARN";
+			case NeoLogger::Core::LogLevel::ERR:
+				return L"ERROR";
+			case NeoLogger::Core::LogLevel::CRITICAL:
+				return L"CRITICAL";
+			default:
+				return L"UNKNOWN";
+			}
+		}
 
-            if (this->checkFile() == NeoLogger::OPENERR)
-            {
-                std::wcerr << L"Open file error: " << this->filename_ << std::endl;
-                return NeoLogger::OPENERR;
-            }
+	public:
 
-            std::wstring msg = formatter_;
-            this->parseTokens(formattedTime.str(), wideLevelString, logText.text, &msg);
+		// Function allowing to change the output format
+		void setFormatter(std::wstring _Formatter)
+		{
+			if (this->tokens_.exist(_Formatter, L"%message%"))
+			{
+				this->formatter_ = _Formatter;
+			}
+		}
 
-            this->stream_ << msg << std::endl;
-            
-            if (consoleStream) {
-                std::wcout << msg << std::endl;
-            }
+		// Function allowing to change the output format
+		void setFormatter(std::wstring& _Formatter)
+		{
+			if (this->tokens_.exist(_Formatter, L"%message%"))
+			{
+				this->formatter_ = _Formatter;
+			}
+		}
 
-            return NeoLogger::OK;
-        }
-    };
-}
+		// Function for converting from an extended string to a structure
+		NeoLogger::Core::LogText getLogText(std::wstring wideString)
+		{
+			// Initialize our structure
+			NeoLogger::Core::LogText logText;
+
+			// Assign our values
+			logText.text = wideString;
+			logText.length = wideString.length();
+
+			// Return the prepared structure
+			return logText;
+		}
+
+		// Function for converting from an extended string to a structure
+		NeoLogger::Core::LogTimestamp getLogTimestamp()
+		{
+			// Initialize our structure
+			NeoLogger::Core::LogTimestamp logTimestamp;
+
+			// Get Unix-like time
+			std::time_t time = std::time(nullptr);
+
+			// Get formatted time
+			auto currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+			std::tm timeInfo;
+
+			// Safe time retrieval
+
+#ifdef _WIN32
+			localtime_s(&timeInfo, &currentTime);
+#else
+			localtime_r(&currentTime, &timeInfo);
+#endif
+
+			// Assign our values
+			logTimestamp.timeInfo = timeInfo;
+			logTimestamp.time = time;
+
+			// Return the prepared structure
+			return logTimestamp;
+		}
+
+		// Function for converting from logger options to a complete event
+		NeoLogger::Core::LogMessage toLogMessage(
+			NeoLogger::Core::LogLevel logLevel,
+			NeoLogger::Core::LogText logText)
+		{
+			// Initialize the structure
+			NeoLogger::Core::LogMessage logMessage;
+
+			// Assign values
+			logMessage.level = logLevel;
+			logMessage.text = logText;
+			logMessage.timestamp = getLogTimestamp();
+
+			// Return the prepared structure
+			return logMessage;
+		}
+
+		// Logging event from structure
+		int logMessage(NeoLogger::Core::LogMessage logMessage, bool consoleStream)
+		{
+			// Getting the message level
+			NeoLogger::Core::LogLevel level = logMessage.level;
+			std::wstring wideLevelString = levelToWideString(level);
+
+			// Getting the message text
+			NeoLogger::Core::LogText text = logMessage.text;
+			NeoLogger::Core::LogTimestamp timestamp = logMessage.timestamp;
+
+			// Getting the message timestamp
+			std::wstringstream formattedTime;
+			formattedTime << std::put_time(&timestamp.timeInfo, L"%Y-%m-%d %H:%M:%S");
+
+			// Checking if the file is open
+			if (this->checkFile() == NeoLogger::OPENERR)
+			{
+				std::wcerr << L"Open file error: " << this->filename_ << std::endl;
+				
+				// We drop the same error
+				return NeoLogger::OPENERR;
+			}
+
+			// Copying the formatter
+			std::wstring msg = formatter_;
+
+			// Substituting values ​​into our variable
+			this->parseTokens(formattedTime.str(), wideLevelString, text.text, &msg);
+
+			// Writing data into the file stream
+			this->stream_ << msg << std::endl;
+
+			// Writing data into the cli stream
+			if (consoleStream) {
+				std::wcout << msg << std::endl;
+			}
+
+			// Returning the result (Everything went fine)
+			return NeoLogger::OK;
+		}
+
+		// Logging event from passed values
+		int logMessage(NeoLogger::Core::LogLevel logLevel, NeoLogger::Core::LogText logText, bool consoleStream)
+		{
+			// Getting the message level
+			std::wstring wideLevelString = levelToWideString(logLevel);
+
+			// Getting the message timestamp
+			NeoLogger::Core::LogTimestamp timestamp = getLogTimestamp();
+
+			std::wstringstream formattedTime;
+			formattedTime << std::put_time(&timestamp.timeInfo, L"%Y-%m-%d %H:%M:%S");
+
+			// Checking if the file is open
+			if (this->checkFile() == NeoLogger::OPENERR)
+			{
+				std::wcerr << L"Open file error: " << this->filename_ << std::endl;
+				
+				// We drop the same error
+				return NeoLogger::OPENERR;
+			}
+
+			// Copying the formatter
+			std::wstring msg = formatter_;
+			
+			// Substituting values ​​into our variable
+			this->parseTokens(formattedTime.str(), wideLevelString, logText.text, &msg);
+
+			// Writing data into the file stream
+			this->stream_ << msg << std::endl;
+
+			// Writing data into the cli stream
+			if (consoleStream) {
+				std::wcout << msg << std::endl;
+			}
+
+			// Returning the result (Everything went fine)
+			return NeoLogger::OK;
+		}
+
+		// Destroy the logger object in memory
+		void destroy()
+		{
+			// Destroying an instance (calling deconstructor then clearing memory)
+			delete this;
+		}
+
+		// Check if the file is open
+		bool is_open()
+		{
+			// Getting the result of whether a file is open in boolean form
+			return this->stream_.is_open();
+		}
+	}; // class Logger
+} // namespace NeoLogger
