@@ -10,56 +10,11 @@
   ```
 
 - **Inclusion in the project**
-  - *C*
-    ```c
-    #include "neologger/neologger.h"
-    ```
-  - *C++*
     ```cpp
     #include "neologger/neologger.hpp"
     ```
 
 - **Example**
-  - *C*
-    ```c
-    #include "neologger/neologger.h"
-    
-    int main() {
-        Logger* logger = createLogger(L"log.txt");
-        if (logger == NULL) {
-            wprintf(L"Logger creation failed.\n");
-            return 1;
-        }
-    
-        LogText* logText = getLogText(L"Sample log message");
-        if (logText == NULL) {
-            wprintf(L"LogText creation failed.\n");
-            destroyLogger(logger);
-            return 1;
-        }
-    
-        LogMessage* logMessage = toLogMessage(INFO, logText);
-        if (logMessage == NULL) {
-            wprintf(L"LogMessage creation failed.\n");
-            free(logText->text);
-            free(logText);
-            destroyLogger(logger);
-            return 1;
-        }
-    
-        logMessage(logger, logMessage, 0);
-    
-        free(logText->text);
-        free(logText);
-        free(logMessage);
-    
-        destroyLogger(logger);
-    
-        return 0;
-    }
-    ```
-
-  - *C++*
     ```cpp
     #include "neologger/neologger.hpp"
     
