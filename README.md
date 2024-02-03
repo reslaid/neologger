@@ -21,7 +21,7 @@
         ```cpp
         NeoLogger::Logger logger(L"application.log");
         ```
-    - **Memory allocation**
+    - **Dynamic allocated memory**
         ```cpp
         NeoLogger::Logger* logger;
         logger = new NeoLogger::Logger(L"application.log");
@@ -29,7 +29,7 @@
 
 - **Destroying an instance**
     ```cpp
-    logger->destroy(); // memory allocation required by "new" operator
+    logger->destroy(); // Dynamic allocated memory required by "new" operator
     ```
 - **Formatting Output**
     - **Formatter tokens**
@@ -44,7 +44,7 @@
             ```cpp
             logger.setFormatter(L"{%login%}:{%device%} [%asctime%] [%level%]: %message%");
             ```
-        - **Memory allocation**
+        - **Dynamic allocated memory**
             ```cpp
             logger->setFormatter(L"{%login%}:{%device%} [%asctime%] [%level%]: %message%");
             ```
@@ -63,7 +63,7 @@
             ```cpp
             nlText = logger.getLogText(L"Message Text");
             ```
-        - **Memory allocation**
+        - **Dynamic allocated memory**
             ```cpp
             nlText = logger->getLogText(L"Message Text");
             ```
@@ -83,7 +83,7 @@
             nlMessage.timestamp = logger.getLogTimestamp();
             ```
 
-        - **Memory allocation**
+        - **Dynamic allocated memory**
             ```cpp
             nlMessage.timestamp = logger->getLogTimestamp();
             ```
@@ -96,7 +96,7 @@
                 nlText
             );
             ```
-        - **Memory allocation**
+        - **Dynamic allocated memory**
             ```cpp
             nlMessage = logger->toLogMessage(
                 NeoLogger::Core::LogLevel::INFO,
@@ -109,7 +109,7 @@
         ```cpp
         bool nlFileIsOpen = logger.is_open();
         ```
-    - **Memory allocation**
+    - **Dynamic allocated memory**
         ```cpp
         bool nlFileIsOpen = logger->is_open();
         ```
@@ -123,7 +123,7 @@
                 true // Logging to the cli (console)
             );
             ```
-        - **Memory allocation**
+        - **Dynamic allocated memory**
             ```cpp
             logger->logMessage(
                 nlMessage,
@@ -144,7 +144,7 @@
                 true // Logging to the cli (console)
             );
             ```
-        - **Memory allocation**
+        - **Dynamic allocated memory**
             ```cpp
             logger->logMessage(
                 NeoLogger::Core::LogLevel::INFO,
