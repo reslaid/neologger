@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <locale>
+#include <codecvt>
 #include <chrono>
 #include <string>
 #include <cstring>
@@ -12,6 +14,7 @@
   #include <Windows.h>
 #else
   #include <unistd.h>
+  #include <iconv.h>
 #endif
 
 namespace NeoLogger
@@ -64,17 +67,46 @@ namespace NeoLogger
 			return result;
 		}
 
-		// Converting any type to an wide string
-		template<typename T>
-		std::wstring toWideString(T value)
+		// Converting string to an wide string
+		std::wstring toWideString(const std::string& str)
 		{
-			// Creating a Stream Object for a Wide String
-			std::wstringstream wss;
-			
-			wss << value;
-			
-			// Return the finished line
-			return wss.str();
+
+#ifdef _WIN32
+			int bufferSize = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, NULL, 0);
+			wchar_t* buffer = new wchar_t[bufferSize];
+			MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer, bufferSize);
+
+			std::wstring result(buffer);
+			delete[] buffer;
+			return result;
+
+#else
+
+			iconv_t conversion = iconv_open("WCHAR_T", "UTF-8");
+			if (conversion == (iconv_t)-1) {
+				// Обработка ошибки открытия конвертера
+				return L"";
+			}
+
+			size_t inSize = str.size();
+			size_t outSize = inSize * sizeof(wchar_t);
+			char* inBuffer = const_cast<char*>(str.c_str());
+			wchar_t* outBuffer = new wchar_t[inSize];
+
+			if (iconv(conversion, &inBuffer, &inSize, reinterpret_cast<char*>(&outBuffer), &outSize) == (size_t)-1) {
+				// Обработка ошибки конвертации
+				delete[] outBuffer;
+				iconv_close(conversion);
+				return L"";
+			}
+
+			iconv_close(conversion);
+
+			std::wstring result(outBuffer);
+			delete[] outBuffer;
+			return result;
+
+#endif
 		}
 	} // namespace Converter
 
