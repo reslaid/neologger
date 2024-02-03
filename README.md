@@ -103,35 +103,64 @@
             - `consoleStream`: ***bool***
 
 # **Example**
-```cpp
-#include "neologger/neologger.hpp"
+- **Basic logging**
+    
+    ```cpp
+    #include "neologger/neologger.hpp"
 
-int main()
-{
-    NeoLogger::Logger logger(L"log.txt");
+    int main()
+    {
+        NeoLogger::Logger logger(L"log.txt");
 
-    logger.logMessage(
-        NeoLogger::Core::LogLevel::DEBUG,
-        logger.getLogText(L"Debug message"),
-        false
-    );
+        logger.logMessage(
+            NeoLogger::Core::LogLevel::DEBUG,
+            logger.getLogText(L"Debug message"),
+            false
+        );
 
-    logger.logMessage(
-        logger.toLogMessage(
-            NeoLogger::Core::LogLevel::INFO,
-            logger.getLogText(L"Informational message")
-        ),
-        false
-    );
+        logger.logMessage(
+            logger.toLogMessage(
+                NeoLogger::Core::LogLevel::INFO,
+                logger.getLogText(L"Informational message")
+            ),
+            false
+        );
 
-    logger.logMessage(
-        logger.toLogMessage(
-            NeoLogger::Core::LogLevel::ERROR,
-            logger.getLogText(L"Error message")
-        ),
-        false
-    );
+        logger.logMessage(
+            logger.toLogMessage(
+                NeoLogger::Core::LogLevel::ERROR,
+                logger.getLogText(L"Error message")
+            ),
+            false
+        );
 
-    return 0x0;
-}
-```
+        return 0x0;
+    }
+    ```
+
+- **Logging after destruction**
+    ```cpp
+    #include "neologger.hpp"
+
+    int main() {
+        NeoLogger::Logger logger(L"destroy-example.txt");
+
+        // Creating a lambda to save time and improve code readability
+        auto log = [&](const wchar_t* message) {
+            auto nlText = logger.getLogText(message);
+            auto nlMessage = logger.toLogMessage(NeoLogger::Core::LogLevel::INFO, nlText);
+            logger.logMessage(nlMessage, true);
+        };
+
+        // OK
+        log(L"Message: 1");
+
+        // Logger destruction (removal from stack)
+        logger.destroy();
+
+        // INVALID_HEAP_POINTER
+        log(L"Message: 2");
+
+        return 0x0;
+    }
+    ```
