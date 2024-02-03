@@ -17,12 +17,19 @@
     ```
 
 - **Creating an Instance**
-    ```cpp
-    NeoLogger::Logger logger(L"application.log");
-    ```
+    - **Stack**
+        ```cpp
+        NeoLogger::Logger logger(L"application.log");
+        ```
+    - **Memory allocation**
+        ```cpp
+        NeoLogger::Logger* logger;
+        logger = new NeoLogger::Logger(L"application.log");
+        ```
+
 - **Destroying an instance**
     ```cpp
-    logger.destroy();
+    logger->destroy(); // memory allocation required by "new" operator
     ```
 - **Formatting Output**
     - **Formatter tokens**
@@ -33,9 +40,14 @@
         - `%device%`: **Name of the device on which the recording was made**
 
     - **Customization formatters**
-        ```cpp
-        logger.setFormatter(L"{%login%}:{%device%} [%asctime%] [%level%]: %message%");
-        ```
+        - **Stack**
+            ```cpp
+            logger.setFormatter(L"{%login%}:{%device%} [%asctime%] [%level%]: %message%");
+            ```
+        - **Memory allocation**
+            ```cpp
+            logger->setFormatter(L"{%login%}:{%device%} [%asctime%] [%level%]: %message%");
+            ```
 
 - **LogText Structure**
     ```cpp
@@ -47,9 +59,14 @@
         nlText.length = nlText.text.length();
         ```
     - **Creating a method from a class**
-        ```cpp
-        nlText = logger.getLogText(L"Message Text");
-        ```
+        - **Stack**
+            ```cpp
+            nlText = logger.getLogText(L"Message Text");
+            ```
+        - **Memory allocation**
+            ```cpp
+            nlText = logger->getLogText(L"Message Text");
+            ```
 
 - **LogMessage Structure**
     ```cpp
@@ -59,43 +76,82 @@
         ```cpp
         nlMessage.level = NeoLogger::Core::LogLevel::INFO;
         nlMessage.text = nlText;
-        nlMessage.timestamp = logger.getLogTimestamp();
         ```
+
+        - **Stack**
+            ```cpp
+            nlMessage.timestamp = logger.getLogTimestamp();
+            ```
+
+        - **Memory allocation**
+            ```cpp
+            nlMessage.timestamp = logger->getLogTimestamp();
+            ```
 
     - **Creating a method from a class**
-        ```cpp
-        nlMessage = logger.toLogMessage(
-            NeoLogger::Core::LogLevel::INFO,
-            nlText
-        );
-        ```
+        - **Stack**
+            ```cpp
+            nlMessage = logger.toLogMessage(
+                NeoLogger::Core::LogLevel::INFO,
+                nlText
+            );
+            ```
+        - **Memory allocation**
+            ```cpp
+            nlMessage = logger->toLogMessage(
+                NeoLogger::Core::LogLevel::INFO,
+                nlText
+            );
+            ```
 
 - **Checking the file for successfulopening**
-    ```cpp
-    bool nlFileIsOpen = logger.is_open();
-    ```
+    - **Stack**
+        ```cpp
+        bool nlFileIsOpen = logger.is_open();
+        ```
+    - **Memory allocation**
+        ```cpp
+        bool nlFileIsOpen = logger->is_open();
+        ```
 
 - **Event logging**
-    - **Overload No. 1**
-        ```cpp
-        logger.logMessage(
-            nlMessage,
-            true // Logging to the cli (console)
-        );
-        ```
+    - **![Overload No. 1](https://img.shields.io/badge/Overload-No._1-orange.svg)**
+        - **Stack**
+            ```cpp
+            logger.logMessage(
+                nlMessage,
+                true // Logging to the cli (console)
+            );
+            ```
+        - **Memory allocation**
+            ```cpp
+            logger->logMessage(
+                nlMessage,
+                true // Logging to the cli (console)
+            );
+            ```
 
         - **Parameters**
             - `logMessage`: ***NeoLogger::Core::LogMessage***
             - `consoleStream`: ***bool***
     
-    - **Overload No. 2**
-        ```cpp
-        logger.logMessage(
-            NeoLogger::Core::LogLevel::INFO,
-            nlText,
-            true // Logging to the cli (console)
-        );
-        ```
+    - **![Overload No. 2](https://img.shields.io/badge/Overload-No._2-brown.svg)**
+        - **Stack**
+            ```cpp
+            logger.logMessage(
+                NeoLogger::Core::LogLevel::INFO,
+                nlText,
+                true // Logging to the cli (console)
+            );
+            ```
+        - **Memory allocation**
+            ```cpp
+            logger->logMessage(
+                NeoLogger::Core::LogLevel::INFO,
+                nlText,
+                true // Logging to the cli (console)
+            );
+            ```
 
         - **Parameters**
             - `logLevel`: ***NeoLogger::Core::LogLevel***
@@ -139,28 +195,57 @@
     ```
 
 - **Logging after destruction**
-    ```cpp
-    #include "neologger.hpp"
+    - **![Valid](https://img.shields.io/badge/Memory_Allocation-VALID-green.svg)**
+        ```cpp
+        #include "neologger.hpp"
 
-    int main() {
-        NeoLogger::Logger logger(L"destroy-example.txt");
+        int main() {
+            NeoLogger::Logger* logger = new NeoLogger::Logger(L"destroy-example.txt");
 
-        // Creating a lambda to save time and improve code readability
-        auto log = [&](const wchar_t* message) {
-            auto nlText = logger.getLogText(message);
-            auto nlMessage = logger.toLogMessage(NeoLogger::Core::LogLevel::INFO, nlText);
-            logger.logMessage(nlMessage, true);
-        };
+            // Creating a lambda to save time and improve code readability
+            auto log = [&](const wchar_t* message) {
+                auto nlText = logger->getLogText(message);
+                auto nlMessage = logger->toLogMessage(NeoLogger::Core::LogLevel::INFO, nlText);
+                logger->logMessage(nlMessage, true);
+            };
 
-        // OK
-        log(L"Message: 1");
+            // OK
+            log(L"Message: 1");
 
-        // Logger destruction (removal from stack)
-        logger.destroy();
+            // Logger destruction
+            logger->destroy();
 
-        // INVALID_HEAP_POINTER
-        log(L"Message: 2");
+            // std::length_error at memory location 0x0...(memory offset)
+            log(L"Message: 2");
 
-        return 0x0;
-    }
-    ```
+            return 0x0;
+        }
+        ```
+
+    - **![NotValid](https://img.shields.io/badge/Stack-NOT_VALID-red.svg)**
+        ```cpp
+        #include "neologger.hpp"
+
+        int main() {
+            NeoLogger::Logger logger(L"destroy-example.txt");
+
+            // Creating a lambda to save time and improve code readability
+            auto log = [&](const wchar_t* message) {
+                auto nlText = logger.getLogText(message);
+                auto nlMessage = logger.toLogMessage(NeoLogger::Core::LogLevel::INFO, nlText);
+                logger.logMessage(nlMessage, true);
+            };
+
+            // OK
+            log(L"Message: 1");
+
+            // INVALID_HEAP_POINTER
+            logger.destroy();
+            
+            // ASSERT (C++ Runtime)
+            
+            log(L"Message: 2");
+
+            return 0x0;
+        }
+        ```
