@@ -29,7 +29,7 @@
         - `%asctime%`: **Event time**
         - `%level%`: **Event level**
         - `%message%`: **Event message text**
-        - `%login%`: **Login of the user on which the recording was made**
+        - `%login%`: **Login of the user on which the recording was made (does not work well with Cyrillic)**
         - `%device%`: **Name of the device on which the recording was made**
 
     - **Customization formatters**
