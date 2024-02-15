@@ -84,7 +84,7 @@ namespace NeoLogger
 
 			iconv_t conversion = iconv_open("WCHAR_T", "UTF-8");
 			if (conversion == (iconv_t)-1) {
-				// Обработка ошибки открытия конвертера
+				// Handling a converter opening error
 				return L"";
 			}
 
@@ -94,7 +94,7 @@ namespace NeoLogger
 			wchar_t* outBuffer = new wchar_t[inSize];
 
 			if (iconv(conversion, &inBuffer, &inSize, reinterpret_cast<char*>(&outBuffer), &outSize) == (size_t)-1) {
-				// Обработка ошибки конвертации
+				// Handling conversion error
 				delete[] outBuffer;
 				iconv_close(conversion);
 				return L"";
