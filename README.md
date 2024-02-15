@@ -1,4 +1,4 @@
-# Neologger ![Version](https://img.shields.io/badge/Version-0.1.0-blue.svg) ![Language](https://img.shields.io/badge/Language-C%2B%2B-purple.svg) ![Standart](https://img.shields.io/badge/C++_STD-17-404.svg)
+# Neologger ![Version](https://img.shields.io/badge/Version-0.1.4-blue.svg) ![Language](https://img.shields.io/badge/Language-C%2B%2B-purple.svg) ![Standart](https://img.shields.io/badge/C++_STD-17-404.svg)
 
 
 # **Dependencies**
