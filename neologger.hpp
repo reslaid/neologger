@@ -49,30 +49,6 @@ namespace NeoLogger
 	// Namespace for storing converters
 	namespace Converter
 	{
-		// Converts a tuple type to a string type
-		template <typename... Args>
-		std::string tupleToString(const std::tuple<Args...>& myTuple)
-		{
-			// Creating a Stream Object for a String
-			std::stringstream ss;
-
-			ss << "(";
-
-			// Recursive function to process each element of a tuple
-			std::apply([&ss](const auto&... args) {
-				((ss << args << ", "), ...);
-				}, myTuple);
-
-			// Removing extra commas and spaces
-			std::string result = ss.str();
-			result = result.substr(0, result.size() - 2);
-
-			result += ")";
-
-			// Return the finished line
-			return result;
-		}
-
 		// Converting string to an wide string
 		std::wstring toWideString(const std::string& str)
 		{
@@ -120,22 +96,6 @@ namespace NeoLogger
 #endif
 		}
 	} // namespace Converter
-
-	// Namespace for storing information about the logger (version, publisher, etc.)
-	namespace Metadata
-	{
-		const std::tuple<int, int, int> __Version__(0, 1, 0);
-
-		// Get logger version
-		std::wstring getVersion()
-		{
-			return NeoLogger::Converter::toWideString(
-				NeoLogger::Converter::tupleToString(
-					__Version__
-				)
-			);
-		}
-	} // namespace Metadata
 
 	// Namespace for storing structures
 	namespace Core
