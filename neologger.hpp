@@ -426,7 +426,7 @@ namespace NeoLogger
 		}
 
 		// Function for converting from an extended string to a structure
-		NeoLogger::Core::LogText getLogText(std::wstring wideString)
+		NeoLogger::Core::LogText getLogText(const std::wstring& wideString)
 		{
 			// Initialize our structure
 			NeoLogger::Core::LogText logText;
@@ -471,7 +471,7 @@ namespace NeoLogger
 		// Function for converting from logger options to a complete event
 		NeoLogger::Core::LogMessage toLogMessage(
 			NeoLogger::Core::LogLevel logLevel,
-			NeoLogger::Core::LogText logText)
+			const NeoLogger::Core::LogText& logText)
 		{
 			// Initialize the structure
 			NeoLogger::Core::LogMessage logMessage;
