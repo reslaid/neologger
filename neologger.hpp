@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <iostream>
+#include <vector>
 #include <iomanip>
 #include <fstream>
 #include <sstream>
@@ -79,12 +79,17 @@ namespace NeoLogger
 
 #ifdef _WIN32
 			int bufferSize = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, NULL, 0);
-			wchar_t* buffer = new wchar_t[bufferSize];
-			MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer, bufferSize);
+			if (bufferSize == 0) {
+				throw std::runtime_error("Failed to convert string to wide string");
+			}
 
-			std::wstring result(buffer);
-			delete[] buffer;
-			return result;
+			std::vector<wchar_t> buffer(bufferSize);
+
+			if (MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer.data(), bufferSize) == 0) {
+				throw std::runtime_error("Failed to convert string to wide string");
+			}
+
+			return std::wstring(buffer.data());
 
 #else
 
