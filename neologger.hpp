@@ -8,13 +8,19 @@
 #include <chrono>
 #include <string>
 #include <cstring>
+#include <cstdarg>
+#include <cwchar>
 #include <tuple>
 
 #ifdef _WIN32
-  #include <Windows.h>
+#include <Windows.h>
+#include <DbgHelp.h>
+#pragma comment(lib, "DbgHelp.lib")
 #else
-  #include <unistd.h>
-  #include <iconv.h>
+#include <unistd.h>
+#include <iconv.h>
+#include <sys/types.h>
+#include <pwd.h>
 #endif
 
 namespace NeoLogger
@@ -23,16 +29,16 @@ namespace NeoLogger
 #pragma region constants
 
 	// Error indicating that the file was not opened
-	constexpr int OPENERR =			-0xF1;
+	constexpr int OPENERR = -0xF1;
 
 	// Error indicator getting device name
-	constexpr int DEVICENAMERR =	-0xF2;
+	constexpr int DEVICENAMERR = -0xF2;
 
 	// Error indicator getting login
-	constexpr int LOGINERR =		-0xF3;
+	constexpr int LOGINERR = -0xF3;
 
 	// Indicates successful operation
-	constexpr int OK =				0x0;
+	constexpr int OK = 0x0;
 
 	// Error indicator
 	constexpr int FAILURE = OPENERR | DEVICENAMERR | LOGINERR;
@@ -49,7 +55,7 @@ namespace NeoLogger
 		{
 			// Creating a Stream Object for a String
 			std::stringstream ss;
-			
+
 			ss << "(";
 
 			// Recursive function to process each element of a tuple
@@ -114,7 +120,7 @@ namespace NeoLogger
 	namespace Metadata
 	{
 		const std::tuple<int, int, int> __Version__(0, 1, 0);
-		
+
 		// Get logger version
 		std::wstring getVersion()
 		{
@@ -143,7 +149,7 @@ namespace NeoLogger
 
 			// Logging level for warnings
 			WARNING = WARN,
-			
+
 			// Logging level for errors
 			ERR,
 
@@ -201,7 +207,7 @@ namespace NeoLogger
 
 			// Getting a position
 			size_t pos = input.find(token);
-			
+
 			// Changing characters
 			while (pos != std::wstring::npos) {
 				input.replace(pos, token.length(), replacement);
@@ -282,7 +288,15 @@ namespace NeoLogger
 			}
 #else
 			// On other platforms
-			char* loginName = getlogin();
+			char* loginName;
+
+			uid_t euid = geteuid();
+			struct passwd* pw = getpwuid(euid);
+
+			if (pw != nullptr) {
+				loginName = pw->name;
+			}
+		
 			if (loginName != nullptr)
 			{
 				// Convert the login name to a wide string
@@ -364,7 +378,7 @@ namespace NeoLogger
 
 				// Using the object
 				this->tokens_.replace(*result, L"%device%", std::wstring(deviceNameBuffer));
-			
+
 				// Removing object from stack
 				delete[] deviceNameBuffer;
 			}
@@ -472,7 +486,7 @@ namespace NeoLogger
 		}
 
 		// Logging event from structure
-		int logMessage(NeoLogger::Core::LogMessage logMessage, bool consoleStream)
+		int logMessage(NeoLogger::Core::LogMessage logMessage, bool consoleStream, bool fileStream)
 		{
 			// Getting the message level
 			NeoLogger::Core::LogLevel level = logMessage.level;
@@ -490,7 +504,7 @@ namespace NeoLogger
 			if (this->checkFile() == NeoLogger::OPENERR)
 			{
 				std::wcerr << L"Open file error: " << this->filename_ << std::endl;
-				
+
 				// We drop the same error
 				return NeoLogger::OPENERR;
 			}
@@ -502,7 +516,11 @@ namespace NeoLogger
 			this->parseTokens(formattedTime.str(), wideLevelString, text.text, &msg);
 
 			// Writing data into the file stream
-			this->stream_ << msg << std::endl;
+			if (fileStream) {
+
+				this->stream_ << msg << std::endl;
+
+			}
 
 			// Writing data into the cli stream
 			if (consoleStream) {
@@ -514,7 +532,7 @@ namespace NeoLogger
 		}
 
 		// Logging event from passed values
-		int logMessage(NeoLogger::Core::LogLevel logLevel, NeoLogger::Core::LogText logText, bool consoleStream)
+		int logMessage(NeoLogger::Core::LogLevel logLevel, NeoLogger::Core::LogText logText, bool consoleStream, bool fileStream)
 		{
 			// Getting the message level
 			std::wstring wideLevelString = levelToWideString(logLevel);
@@ -529,19 +547,23 @@ namespace NeoLogger
 			if (this->checkFile() == NeoLogger::OPENERR)
 			{
 				std::wcerr << L"Open file error: " << this->filename_ << std::endl;
-				
+
 				// We drop the same error
 				return NeoLogger::OPENERR;
 			}
 
 			// Copying the formatter
 			std::wstring msg = formatter_;
-			
+
 			// Substituting values ​​into our variable
 			this->parseTokens(formattedTime.str(), wideLevelString, logText.text, &msg);
 
 			// Writing data into the file stream
-			this->stream_ << msg << std::endl;
+			if (fileStream) {
+
+				this->stream_ << msg << std::endl;
+
+			}
 
 			// Writing data into the cli stream
 			if (consoleStream) {
